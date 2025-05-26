@@ -28,8 +28,7 @@ const studentSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Add indexes for better query performance
-studentSchema.index({ email: 1 });
+// Add text index for name for text search
 studentSchema.index({ name: 'text' });
 
 const Student = mongoose.model('Student', studentSchema);
