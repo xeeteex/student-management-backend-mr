@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import Student from '../models/Student.js';
+
 
 // @desc    Protect routes
 // @access  Private
@@ -48,21 +48,4 @@ export const authorize = (...roles) => {
   };
 };
 
-export const ensureOwnership = async (req, res, next) => {
-  try {
-    const student = await Student.findById(req.params.id);
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found' });
-    }
-    
-    if (req.user.role === 'student' && student.owner.toString() !== req.userId) {
-      return res.status(403).json({
-        message: 'You can only access your own student record'
-      });
-    }
-    
-    next();
-  } catch (error) {
-    next(error);
-  }
-};
+

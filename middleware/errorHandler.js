@@ -1,10 +1,3 @@
-/**
- * Error handling middleware for Express
- * @param {Error} err - The error object
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next function
- */
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;

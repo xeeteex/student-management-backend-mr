@@ -2,17 +2,10 @@ import Student from '../models/Student.js';
 import User from '../models/User.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
-// Middleware to check admin role
 const checkAdmin = authorize('admin');
 
-/**
- * @desc    Get current student's profile
- * @route   GET /api/students/me
- * @access  Private/Student
- */
 export const getCurrentStudent = [protect, async (req, res, next) => {
   try {
-    // The student's ID is available in req.user._id from the auth middleware
     const student = await Student.findOne({ owner: req.user._id });
     
     if (!student) {
@@ -75,26 +68,30 @@ export const createStudent = [protect, authorize('admin'), async (req, res, next
 /**
  * @desc    Get all students
  * @route   GET /api/students
- * @access  Admin only
+ * @access  Public
  */
-export const getAllStudents = [protect, authorize('admin'), async (req, res, next) => {
+export const getAllStudents = async (req, res, next) => {
   try {
     const students = await Student.find().sort({ createdAt: -1 });
-    res.json(students);
+    res.json({
+      success: true,
+      count: students.length,
+      data: students
+    });
   } catch (error) {
+    console.error('Error fetching students:', error);
     next(error);
   }
-}];
+};
 
 /**
  * @desc    Get single student by ID
  * @route   GET /api/students/:id
  * @access  Public
  */
-export const getStudentById = [protect, async (req, res, next) => {
+export const getStudentById = async (req, res, next) => {
   try {
     console.log('Fetching student with ID:', req.params.id);
-    console.log('Authenticated user:', req.user);
     
     const student = await Student.findById(req.params.id);
     
@@ -103,15 +100,6 @@ export const getStudentById = [protect, async (req, res, next) => {
       return res.status(404).json({ 
         success: false,
         error: 'Student not found' 
-      });
-    }
-
-    // Students can only view their own records
-    if (req.user.role === 'student' && student.owner.toString() !== req.user._id.toString()) {
-      console.log('Access denied - user not authorized to view this student');
-      return res.status(403).json({ 
-        success: false,
-        error: 'You can only view your own student record' 
       });
     }
 
@@ -124,8 +112,7 @@ export const getStudentById = [protect, async (req, res, next) => {
     console.error('Error in getStudentById:', {
       message: error.message,
       stack: error.stack,
-      params: req.params,
-      user: req.user
+      params: req.params
     });
     
     res.status(500).json({ 
@@ -134,13 +121,8 @@ export const getStudentById = [protect, async (req, res, next) => {
       message: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
-}];
+};
 
-/**
- * @desc    Update a student
- * @route   PUT /api/students/:id
- * @access  Public
- */
 export const updateStudent = [protect, async (req, res, next) => {
   try {
     console.log('Updating student with ID:', req.params.id);
@@ -201,11 +183,6 @@ export const updateStudent = [protect, async (req, res, next) => {
   }
 }]
 
-/**
- * @desc    Delete a student
- * @route   DELETE /api/students/:id
- * @access  Admin only
- */
 export const deleteStudent = [protect, authorize('admin'), async (req, res, next) => {
   try {
     console.log('Deleting student with ID:', req.params.id);

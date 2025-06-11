@@ -9,11 +9,8 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d'
   });
-};
+}
 
-// @desc    Login admin
-// @route   POST /api/auth/login
-// @access  Public
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -66,12 +63,6 @@ export const login = async (req, res, next) => {
   }
 };
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-// @desc    Get current admin
-// @route   GET /api/auth/me
-// @access  Private
 export const getMe = async (req, res, next) => {
   try {
     // req.user is set by the protect middleware
@@ -105,7 +96,7 @@ export const getMe = async (req, res, next) => {
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, role = 'student', age, course } = req.body;
+    const { name, email, password, role = 'user' } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -140,57 +131,17 @@ export const register = async (req, res, next) => {
       });
     }
 
-    // Validate student-specific fields if role is student
-    if (role === 'student') {
-      if (!age || isNaN(age) || age < 1 || age > 120) {
-        return res.status(400).json({
-          success: false,
-          message: 'Please provide a valid age'
-        });
-      }
-      if (!course) {
-        return res.status(400).json({
-          success: false,
-          message: 'Course is required for student registration'
-        });
-      }
-    }
-
     // Create new user
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Start a session for transaction
-    const session = await User.startSession();
-    session.startTransaction();
-    
     try {
       // Create user
-      const newUser = new User({
+      const newUser = await User.create({
         name,
         email,
         password: hashedPassword,
         role
       });
-
-      await newUser.save({ session });
-
-      // If user is a student, create student record
-      if (role === 'student') {
-        const newStudent = new Student({
-          user: newUser._id,
-          name,
-          email,
-          age: parseInt(age, 10),
-          course,
-          status: 'active',
-          owner: newUser._id  // Set the owner to the new user's ID
-        });
-        await newStudent.save({ session });
-      }
-
-      // Commit the transaction
-      await session.commitTransaction();
-      session.endSession();
 
       // Generate token
       const token = generateToken(newUser._id);
@@ -205,10 +156,12 @@ export const register = async (req, res, next) => {
         message: 'Registration successful!'
       });
     } catch (error) {
-      // If anything fails, abort the transaction
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
+      console.error('Registration error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error during registration',
+        error: error.message
+      });
     }
   } catch (error) {
     next(error);
